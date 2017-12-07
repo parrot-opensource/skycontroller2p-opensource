@@ -1945,7 +1945,9 @@ static void msm_otg_start_host(struct usb_otg *otg, int on)
 		dev_dbg(otg->phy->dev, "host off\n");
 		msm_otg_dbg_log_event(&motg->phy, "HOST OFF",
 				motg->inputs, otg->phy->state);
-		msm_hsusb_vbus_power(motg, 0);
+
+		if (!motg->vbus_always_on)
+			msm_hsusb_vbus_power(motg, 0);
 
 		cancel_delayed_work_sync(&motg->perf_vote_work);
 		msm_otg_perf_vote_update(motg, false);
@@ -4295,12 +4297,41 @@ static ssize_t store_vbus(struct device *dev, struct device_attribute *attr,
 	if (buf[0] != '0' && buf[0] != '1')
 		return -EINVAL;
 
+	if (motg->vbus_always_on && (buf[0] == '0'))
+		return -EINVAL;
+
 	msm_hsusb_vbus_power(motg, buf[0] - '0');
 
 	return count;
 }
 
 static DEVICE_ATTR(vbus, S_IWUSR, NULL, store_vbus);
+
+static ssize_t show_vbus_always_on(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	struct msm_otg *motg = the_msm_otg;
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", motg->vbus_always_on);
+}
+
+static ssize_t store_vbus_always_on(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct msm_otg *motg = the_msm_otg;
+
+	if (buf[0] == '0')
+		motg->vbus_always_on = 0;
+	else if (buf[0] == '1')
+		motg->vbus_always_on = 1;
+	else
+		return -EINVAL;
+
+	return count;
+}
+
+static DEVICE_ATTR(vbus_always_on, S_IRUGO | S_IWUSR,
+		show_vbus_always_on, store_vbus_always_on);
 
 struct msm_otg_platform_data *msm_otg_dt_to_pdata(struct platform_device *pdev)
 {
@@ -5050,6 +5081,10 @@ static int msm_otg_probe(struct platform_device *pdev)
 	if (ret)
 		goto remove_phy;
 
+	ret = device_create_file(&pdev->dev, &dev_attr_vbus_always_on);
+	if (ret)
+		goto remove_vbus;
+
 	wake_lock(&motg->wlock);
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
@@ -5101,6 +5136,10 @@ remove_cdev:
 	}
 	if (psy)
 		power_supply_unregister(psy);
+
+	device_remove_file(&pdev->dev, &dev_attr_vbus_always_on);
+remove_vbus:
+	device_remove_file(&pdev->dev, &dev_attr_vbus);
 remove_phy:
 	usb_remove_phy(&motg->phy);
 free_async_irq:
@@ -5185,6 +5224,10 @@ static int msm_otg_remove(struct platform_device *pdev)
 		msm_otg_setup_devices(pdev, motg->pdata->mode, false);
 	if (psy)
 		power_supply_unregister(psy);
+
+	device_remove_file(&pdev->dev, &dev_attr_vbus_always_on);
+	device_remove_file(&pdev->dev, &dev_attr_vbus);
+
 	msm_otg_debugfs_cleanup();
 	cancel_delayed_work_sync(&motg->chg_work);
 	cancel_delayed_work_sync(&motg->id_status_work);

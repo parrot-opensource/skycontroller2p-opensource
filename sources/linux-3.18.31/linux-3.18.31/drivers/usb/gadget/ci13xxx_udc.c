@@ -69,6 +69,9 @@
 #include <linux/usb/msm_hsusb.h>
 
 #include "ci13xxx_udc.h"
+#define CREATE_TRACE_POINTS
+#include "ci13xxx_udc_trace.h"
+
 
 /******************************************************************************
  * DEFINE
@@ -1671,7 +1674,7 @@ static void usb_do_remote_wakeup(struct work_struct *w)
 		ci13xxx_wakeup(&udc->gadget);
 }
 
-static ssize_t usb_remote_wakeup(struct device *dev,
+static ssize_t store_usb_remote_wakeup(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct ci13xxx *udc = container_of(dev, struct ci13xxx, gadget.dev);
@@ -1680,7 +1683,28 @@ static ssize_t usb_remote_wakeup(struct device *dev,
 
 	return count;
 }
-static DEVICE_ATTR(wakeup, S_IWUSR, 0, usb_remote_wakeup);
+
+static ssize_t show_usb_remote_wakeup(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct ci13xxx *udc = container_of(dev, struct ci13xxx, gadget.dev);
+	struct usb_gadget_driver *driver = udc->driver;
+	struct usb_gadget *gadget = &udc->gadget;
+	ssize_t ret = -ENODEV;
+
+	if (!driver || !gadget)
+		pr_debug("no gadget driver registered\n");
+	else
+		ret = scnprintf(buf, PAGE_SIZE, "%d\n", gadget->remote_wakeup);
+
+	return ret;
+}
+
+#ifdef CONFIG_USB_GADGET_DEBUG_FILES
+static DEVICE_ATTR(wakeup, S_IRUGO | S_IWUSR, show_usb_remote_wakeup,  store_usb_remote_wakeup);
+#else
+static DEVICE_ATTR(wakeup, S_IRUGO, show_usb_remote_wakeup, 0);
+#endif
 
 /**
  * dbg_create_files: initializes the attribute interface
@@ -2751,6 +2775,9 @@ __acquires(udc->lock)
 			/* Ensure buffer is read before acknowledging to h/w */
 			mb();
 		} while (!hw_test_and_clear_setup_guard());
+
+		/* UDC request tracer */
+		trace_ci13xxx_udc_req(req);
 
 		type = req.bRequestType;
 
@@ -3908,11 +3935,13 @@ static int udc_probe(struct ci13xxx_udc_driver *driver, struct device *dev,
 
 #ifdef CONFIG_USB_GADGET_DEBUG_FILES
 	retval = dbg_create_files(&udc->gadget.dev);
+#else
+	retval = device_create_file(dev, &dev_attr_wakeup);
+#endif
 	if (retval) {
 		pr_err("Registering sysfs files for debug failed!!!!\n");
 		goto del_udc;
 	}
-#endif
 
 	pm_runtime_no_callbacks(&udc->gadget.dev);
 	pm_runtime_set_active(&udc->gadget.dev);

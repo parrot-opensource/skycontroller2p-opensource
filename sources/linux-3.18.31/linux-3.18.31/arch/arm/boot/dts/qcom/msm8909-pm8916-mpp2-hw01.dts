@@ -20,6 +20,14 @@
 };
 
 &soc {
+
+	cpubw: qcom,cpubw {
+		qcom,bw-tbl =
+			<  762 /* 100 MHz */>,
+			< 1525 /* 200 MHz */>,
+			< 3051 /* 400 MHz */>;
+	};
+
 	pinctrl@1000000 {
 		uart_tiny_sleep: uart_tiny_sleep {
 			mux {

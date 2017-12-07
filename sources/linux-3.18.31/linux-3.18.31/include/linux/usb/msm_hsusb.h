@@ -557,6 +557,9 @@ struct msm_otg {
 	struct pm_qos_request pm_qos_req_dma;
 	struct delayed_work perf_vote_work;
 	bool quick_host_device_switch;
+
+/* forced vbus to remains on */
+	unsigned int vbus_always_on;
 };
 
 struct ci13xxx_platform_data {

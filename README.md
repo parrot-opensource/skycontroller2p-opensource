@@ -1,5 +1,5 @@
 Open Source Software used in **Parrot SkyController2P**.  
-Firmware version: **1.0.0**  
+Firmware version: **1.0.2**  
 Unless stated otherwise, later versions of the firmware
 use these same software modules.
 
@@ -20,7 +20,6 @@ You can download Open Source Archives from following table:
 |GPL|[tree](sources/tree-1.6.0)
 |GPL2|[dfu-programmer](sources/dfu-programmer-0.7.2)
 |GPL2|[dnsmasq](sources/dnsmasq-2.66)
-|GPL2|[e2fsprogs](sources/e2fsprogs-1.42.12)
 |GPL2|[iftop](sources/iftop-1.0pre4)
 |GPL2|[iio_generic_buffer](sources/iio_generic_buffer-unknown)
 |GPL2|[linux](sources/linux-3.18.31)
