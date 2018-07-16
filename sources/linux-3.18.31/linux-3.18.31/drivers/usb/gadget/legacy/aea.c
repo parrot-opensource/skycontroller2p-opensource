@@ -144,6 +144,12 @@ static int __init aea_bind(struct usb_composite_dev *cdev)
 	strings_dev[USB_GADGET_PRODUCT_IDX].id = status;
 	device_desc.iProduct = status;
 
+	status = usb_string_id(cdev);
+	if (status < 0)
+		goto fail;
+
+	strings_dev[USB_GADGET_SERIAL_IDX].id = status;
+
 	status = usb_add_config_only(cdev, &aea_config_driver);
 	if (status)
 		goto fail;
