@@ -121,6 +121,14 @@
 
 /* VREG_BOOST : VBUS */
 &spmi_bus {
+	qcom,pm8916@0 {
+		pm8916_pon: qcom,power-on@800 {
+			qcom,pon_1 {
+			    qcom,s2-type = <4>;
+			};
+		};
+	};
+
 	qcom,pm8916@1 {
 		/* disable internal audio codec */
 		msm8x16_wcd_codec@f100{
